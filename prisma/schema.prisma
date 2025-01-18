@@ -1,0 +1,31 @@
+datasource db {
+  // could be postgresql or mysql
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator db {
+  provider             = "prisma-client-py"
+  interface            = "asyncio"
+  recursive_type_depth = 5
+  binaryTargets        = ["native"]
+}
+
+model user {
+  id       String @id @unique @default(uuid())
+  email    String @unique
+  password String
+  git_id   Int?   @unique
+  notes    note[]
+}
+
+model note {
+  id     Int      @id @default(autoincrement())
+  title       String
+  content     String
+  tags        String[]
+  is_archived Boolean @default(false)
+  last_edited DateTime @updatedAt
+  user_id     String
+  user        user?    @relation(fields: [user_id], references: [id])
+}
