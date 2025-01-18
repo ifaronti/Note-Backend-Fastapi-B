@@ -12,7 +12,7 @@ async def fetch_tags(req:Request):
         tags = await prisma.query_raw(
             f"""
                 SELECT tags
-                FROM notes
+                FROM note
                 WHERE note.user_id = '{req.state.user_id}'
             """
         )
@@ -65,16 +65,23 @@ async def Delete_Note(id:int, req:Request):
 
 
 async def modify_note(note:EditNote, id:int, req:Request):
+    note.model_dump_json(exclude_none=True)
+    note_copy = dict(note).copy()
+
+    for i in note_copy:
+        if i == False:
+            del note_copy[i]
+
     try:
         await prisma.connect()
         await prisma.query_raw(
             f"""
                 UPDATE note
                 SET
-                    title = COALESCE('{note.title}', note.title)
-                    content = COALESCE('{note.content}', note.content)
-                    tags = COALESCE('{note.tags}', note.tags)
-                    is_archived = COALESCE('{note.isArchived}', note.is_archived)
+                    title = COALESCE('{note_copy["title"]}', title),
+                    content = COALESCE('{note_copy["content"]}', content),
+                    tags = COALESCE('{{{note_copy["tags"]}}}', tags),
+                    is_archived = COALESCE('{note_copy["isArchived"]}', is_archived)
                 WHERE
                     note.id = '{id}'
                 AND

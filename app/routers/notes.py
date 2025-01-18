@@ -16,7 +16,7 @@ router = APIRouter(
 class GetTags(model):
     tags: list
     success:bool
-    messsage:str
+    message:str
 
 
 @router.get("/tags", response_model=GetTags)
@@ -34,16 +34,19 @@ async def Get_Notes(req:Request, parameter:Optional[str]=None):
 
 
 
+
 @router.delete("/{id}", response_model=GenericResponse)
-async def Delete(id:int):
-    await Delete_Note(id)
+async def Delete(id:int, req:Request):
+    await Delete_Note(id, req)
     return {"success":True, "message":'Note deleted permanently'}
 
 
 
-@router.patch("/note", response_model=GenericResponse)
-async def Edit_Note(note:EditNote, req:Request):
-    await modify_note(note, req=req)
+@router.patch("/note/{id}", response_model=GenericResponse)
+async def Edit_Note(note:EditNote, req:Request, id:int):
+    await modify_note(note, req=req, id=id)
+    return {"success":True, "message":"Note updated successfully"}
+
 
 
 
