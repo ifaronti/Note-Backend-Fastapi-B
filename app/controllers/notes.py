@@ -11,17 +11,21 @@ async def fetch_tags(req:Request):
         await prisma.connect()
         tags = await prisma.query_raw(
             f"""
-                SELECT tags
+            SELECT json_agg(DISTINCT tag) AS tags
+            FROM (
+                SELECT unnest(note.tags) AS tag
                 FROM note
-                WHERE note.user_id = '{req.state.user_id}'
-            """
+                WHERE note.user_id = $1
+            ) AS flattened_tags
+            """, req.state.user_id
         )
+
     except:
         raise
     finally:
         await prisma.disconnect()
 
-    return tags
+    return tags[0]["tags"]
 
 
 
@@ -65,12 +69,7 @@ async def Delete_Note(id:int, req:Request):
 
 
 async def modify_note(note:EditNote, id:int, req:Request):
-    note.model_dump_json(exclude_none=True)
-    note_copy = dict(note).copy()
-
-    for i in note_copy:
-        if i == False:
-            del note_copy[i]
+    note.model_dump_json(exclude_defaults=True)
 
     try:
         await prisma.connect()
@@ -78,10 +77,10 @@ async def modify_note(note:EditNote, id:int, req:Request):
             f"""
                 UPDATE note
                 SET
-                    title = COALESCE('{note_copy["title"]}', title),
-                    content = COALESCE('{note_copy["content"]}', content),
-                    tags = COALESCE('{{{note_copy["tags"]}}}', tags),
-                    is_archived = COALESCE('{note_copy["isArchived"]}', is_archived)
+                    title = COALESCE('{note.title}', title),
+                    content = COALESCE('{note.content}', content),
+                    tags = COALESCE('{{{note.tags}}}', tags),
+                    is_archived = COALESCE('{note.isArchived}', is_archived)
                 WHERE
                     note.id = '{id}'
                 AND
@@ -104,15 +103,16 @@ async def fetch_notes(req:Request, parameter:Optional[str]=None):
         "user_id": req.state.user_id,
         }
 
-    
-        if parameter:
-            where_conditions['OR'] = [
-                {'content': {'contains': parameter, 'mode': 'insensitive'}},
-                {'tags': {'has': parameter}}, 
-                {'title': {'contains': parameter, 'mode': 'insensitive'}}
-            ]
-        
-
+        if parameter=='isArchived':
+            where_conditions['is_archived'] = True
+            print(where_conditions)
+        else:
+            if parameter:
+                where_conditions['OR'] = [
+                    {'content': {'contains': parameter, 'mode': 'insensitive'}},
+                    {"tags": {"has": parameter}}, 
+                    {'title': {'contains': parameter, 'mode': 'insensitive'}},
+                ]
         notes = await prisma.note.find_many(where=where_conditions)
     except:
         raise

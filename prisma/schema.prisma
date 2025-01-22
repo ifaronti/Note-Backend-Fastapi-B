@@ -25,12 +25,7 @@ model note {
   content     String
   tags        String[]
   is_archived Boolean @default(false)
-  last_edited DateTime @updatedAt
+  last_edited DateTime @updatedAt @default(now())
   user_id     String
   user        user?    @relation(fields: [user_id], references: [id])
 }
-
-// model tag {
-//   id Int @id @default(autoincrement())
-//   tag
-// }

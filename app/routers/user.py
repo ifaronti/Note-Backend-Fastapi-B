@@ -28,7 +28,7 @@ async def Email(email:MailLink):
             "access_token":token, 
             "token_type":"Bearer", 
             "message":'Password reset link sent. Check your inbox. Link expires within an hour'
-        }
+    }
 
 @router.patch("/login/reset", dependencies=[Depends(verify_token)], response_model=GenericResponse, status_code=status.HTTP_200_OK)
 async def Reset_Password(password:PassReset, req:Request):
