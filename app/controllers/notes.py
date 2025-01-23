@@ -5,33 +5,6 @@ from typing import Optional
 
 prisma = Prisma()
 
-
-async def fetch_tags(req:Request):
-    try:
-        await prisma.connect()
-        tags = await prisma.query_raw(
-            f"""
-            SELECT json_agg(DISTINCT tag) AS tags
-            FROM (
-                SELECT unnest(note.tags) AS tag
-                FROM note
-                WHERE note.user_id = $1
-            ) AS flattened_tags
-            """, req.state.user_id
-        )
-
-    except:
-        raise
-    finally:
-        await prisma.disconnect()
-
-    return tags[0]["tags"]
-
-
-
-
-
-
 async def new_note(note:NewNote, req:Request):
     note_copy = dict(note).copy()
     note_copy.update({"user_id":req.state.user_id})
@@ -69,7 +42,7 @@ async def Delete_Note(id:int, req:Request):
 
 
 async def modify_note(note:EditNote, id:int, req:Request):
-    note.model_dump_json(exclude_defaults=True)
+    note.model_dump_json(exclude_none=True)
 
     try:
         await prisma.connect()
@@ -77,16 +50,16 @@ async def modify_note(note:EditNote, id:int, req:Request):
             f"""
                 UPDATE note
                 SET
-                    title = COALESCE('{note.title}', title),
-                    content = COALESCE('{note.content}', content),
-                    tags = COALESCE('{{{note.tags}}}', tags),
-                    is_archived = COALESCE('{note.isArchived}', is_archived)
+                    title = COALESCE($1, title),
+                    content = COALESCE($2, content),
+                    tags = COALESCE($3, tags),
+                    is_archived = COALESCE($4, is_archived)
                 WHERE
-                    note.id = '{id}'
+                    note.id = $5
                 AND
                     note.user_id = '{req.state.user_id}'
             """
-        )
+        , note.title, note.content, note.tags, note.is_archived, id)
     except:
         raise
     finally:
@@ -99,21 +72,23 @@ async def modify_note(note:EditNote, id:int, req:Request):
 async def fetch_notes(req:Request, parameter:Optional[str]=None):
     try:
         await prisma.connect()
-        where_conditions = {
-        "user_id": req.state.user_id,
-        }
-
-        if parameter=='isArchived':
-            where_conditions['is_archived'] = True
-            print(where_conditions)
-        else:
-            if parameter:
-                where_conditions['OR'] = [
-                    {'content': {'contains': parameter, 'mode': 'insensitive'}},
-                    {"tags": {"has": parameter}}, 
-                    {'title': {'contains': parameter, 'mode': 'insensitive'}},
-                ]
-        notes = await prisma.note.find_many(where=where_conditions)
+ 
+        notes = await prisma.query_raw(f"""
+            SELECT * 
+            FROM note
+            WHERE user_id = '{req.state.user_id}' 
+            OR (user_id = '{req.state.user_id}' AND
+                ('{parameter}' = 'archived' AND is_archived = TRUE) 
+                OR (
+                ('{parameter}' IS NOT NULL AND 
+                (content ILIKE '%{parameter}%' 
+                OR tags @> ARRAY['{parameter}'] 
+                OR title ILIKE '%{parameter}%')
+                )
+                )
+            )
+            ORDER BY created_at DESC;
+        """)
     except:
         raise
     finally:

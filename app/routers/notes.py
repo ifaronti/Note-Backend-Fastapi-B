@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, status, Request
 from ..dependencies.token import verify_token
 from pydantic import BaseModel as model
 from typing import Optional
-from ..utils.models import GetResponse, GenericResponse, EditNote, NewNote
-from ..controllers.notes import fetch_tags, fetch_notes, Delete_Note, modify_note, new_note
+from ..utils.models import GetResponse, GenericResponse, EditNote, NewNote, GetNotes
+from ..controllers.notes import fetch_notes, Delete_Note, modify_note, new_note
+from ..controllers.tags import fetch_tags
 
 router = APIRouter(
     prefix="/api/notes",
@@ -27,7 +28,7 @@ async def Tags(req:Request):
 
 
 
-@router.get("", response_model=GetResponse)
+@router.get("", response_model=GetNotes)
 async def Get_Notes(req:Request, parameter:Optional[str]=None):
     notes = await fetch_notes(req, parameter)
     return {"success":True, "data":notes}

@@ -28,4 +28,5 @@ model note {
   last_edited DateTime @updatedAt @default(now())
   user_id     String
   user        user?    @relation(fields: [user_id], references: [id])
+  created_at DateTime @default(now())
 }

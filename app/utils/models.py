@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr
 from datetime import datetime
 from typing import Optional
 
@@ -53,8 +53,21 @@ class EditNote(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
     tags: Optional[list] = None
-    isArchived: Optional[bool]=False
+    is_archived: Optional[bool]=False
+
 
 class GetResponse(BaseModel):
     data: list | dict
     success: bool
+
+class Note(BaseModel):
+    id: int
+    title: str
+    content: str
+    tags: list[str]
+    is_archived: bool
+    last_edited: datetime
+    
+class GetNotes(BaseModel):
+    data: list[Note]
+    success:bool
