@@ -28,7 +28,7 @@ async def Tags(req:Request):
 
 
 
-@router.get("", response_model=GetNotes|[])
+@router.get("", response_model=GetNotes or [])
 async def Get_Notes(req:Request, parameter:Optional[str]=None):
     notes = await fetch_notes(req, parameter)
     return {"success":True, "data":notes}
