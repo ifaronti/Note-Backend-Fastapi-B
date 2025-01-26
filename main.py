@@ -5,8 +5,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-app.include_router(user.router)
-app.include_router(notes.router)
 # app.add_middleware(HTTPSRedirectMiddleware)
 
 app.add_middleware(
@@ -17,3 +15,7 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["Authorization", "X-Custom-Header"] 
 )
+
+app.include_router(user.router)
+app.include_router(notes.router)
+# find . -type d -name __pycache__ -exec rm -r {} \+

@@ -71,3 +71,8 @@ class Note(BaseModel):
 class GetNotes(BaseModel):
     data: list[Note]
     success:bool
+
+class GitUser(BaseModel):
+    id:int
+    name:str
+    email:str

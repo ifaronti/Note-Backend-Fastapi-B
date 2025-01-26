@@ -1,5 +1,5 @@
 from prisma import Prisma
-from ..utils.models import Register, Login, LoginResponse, MailLink, GenericResponse, PassReset
+from ..utils.models import Register, Login, LoginResponse, MailLink, GenericResponse, PassReset, GitUser
 from ..dependencies.password_manager import verify_password, hash_password
 from ..dependencies.token import create_token, verify_token
 from fastapi.security import OAuth2PasswordRequestForm
@@ -7,6 +7,7 @@ from typing import Annotated
 from fastapi import Depends, status, HTTPException, Request
 import uuid
 from ..dependencies.send_link import send_mail
+from ..dependencies.git_oauth2 import git_user
 
 prisma = Prisma()
 
@@ -104,11 +105,44 @@ async def reset_password(password:PassReset, req:Request)->GenericResponse:
         await prisma.query_raw(
                 f"""
                     UPDATE "user"
-                    SET password = COALESCE('{hashed}', "user".password)
-                    WHERE "user".id = '{req.state.user_id}'
-                """
+                    SET password = COALESCE($1, "user".password)
+                    WHERE "user".id = $2
+                """, hashed, {req.state.user_id}
             )
     except:
         raise
     finally:
         await prisma.disconnect()
+
+
+async def github_login(code:str):
+    gitUser:GitUser = git_user(code)
+
+    payload = {"git_id":gitUser["id"], "email":gitUser["email"]}
+
+    # try:
+    await prisma.connect()
+    user = await prisma.query_raw(
+            f"""
+                with is_user AS(
+                        SELECT id
+                        FROM "user"
+                        WHERE git_id = {payload["git_id"]}
+                    ),
+                    new_user As(
+                        INSERT INTO "user" ("id", "email", git_id)
+                        VALUES('{user_id}', '{payload["email"]}', {payload["git_id"]})
+                    )
+                
+                SELECT id from is_user
+            """
+        )
+        
+    print(user)
+    # except:
+    #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unable to fetch user details")
+    # finally:
+    await prisma.disconnect()
+
+    token = create_token(dict(user)["id"])
+    return token

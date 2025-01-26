@@ -6,8 +6,8 @@ class Settings(BaseSettings):
     TOKEN_EXPIRY:int
     DATABASE_URL:str
     PRISMA_PY_DEBUG_GENERATOR:int
-    # CLIENT_ID:str
-    # CLIENT_SECRET:str
+    CLIENT_ID:str
+    CLIENT_SECRET:str
     MAIL_PASSWORD:str
     MAIL_USERNAME:str  
     MAIL_FROM:str
