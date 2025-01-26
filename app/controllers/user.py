@@ -120,29 +120,26 @@ async def github_login(code:str):
 
     payload = {"git_id":gitUser["id"], "email":gitUser["email"]}
 
-    # try:
-    await prisma.connect()
-    user = await prisma.query_raw(
-            f"""
-                with is_user AS(
-                        SELECT id
-                        FROM "user"
-                        WHERE git_id = {payload["git_id"]}
-                    ),
-                    new_user As(
-                        INSERT INTO "user" ("id", "email", git_id)
-                        VALUES('{user_id}', '{payload["email"]}', {payload["git_id"]})
+    try:
+        await prisma.connect()
+        user = await prisma.query_raw(
+                f"""
+                WITH inserted AS (
+                    INSERT INTO "user" (id, email, git_id)
+                    VALUES ($1, $2, $3)
+                    ON CONFLICT (email) DO NOTHING
+                    RETURNING id
                     )
-                
-                SELECT id from is_user
-            """
-        )
-        
-    print(user)
-    # except:
-    #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unable to fetch user details")
-    # finally:
-    await prisma.disconnect()
+                    SELECT id FROM inserted
+                    UNION ALL
+                    SELECT id FROM "user" WHERE git_id = $4;
+                """, user_id, str(payload["email"]), payload["git_id"], payload["git_id"] )
+            
+        print(user)
+    except:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unable to fetch user details")
+    finally:
+        await prisma.disconnect()
 
-    token = create_token(dict(user)["id"])
+    token = create_token(user[0]["id"])
     return token

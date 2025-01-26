@@ -17,6 +17,8 @@ model user {
   password String?
   git_id   Int?   @unique
   notes    note[]
+
+  @@unique([id, email, git_id])
 }
 
 model note {
