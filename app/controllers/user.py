@@ -57,7 +57,7 @@ async def logon(formdata:Annotated[Login, Depends(OAuth2PasswordRequestForm)]):
         if not isMatch:
             raise exception
 
-        token = create_token(user_id=user[0]["id"])
+        token = create_token(user_id=user[0]["id"], expiry=2)
     # except Exception:
     #     raise Exception
     finally:
@@ -83,14 +83,12 @@ async def send_link(body:MailLink)-> LoginResponse:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
                             detail="User not found")
     
-        token = create_token(user_email[0]["id"])
-        await send_mail(email)
+        token = create_token(user_email[0]["id"], 1)
+        await send_mail(email, token)
     except:
         raise
     finally:
         await prisma.disconnect()
-    
-    return token
 
 
 
@@ -105,9 +103,9 @@ async def reset_password(password:PassReset, req:Request)->GenericResponse:
         await prisma.query_raw(
                 f"""
                     UPDATE "user"
-                    SET password = COALESCE($1, "user".password)
+                    SET password = COALESCE($1, password)
                     WHERE "user".id = $2
-                """, hashed, {req.state.user_id}
+                """, f'{hashed}', f'{req.state.user_id}'
             )
     except:
         raise
@@ -141,5 +139,5 @@ async def github_login(code:str):
     finally:
         await prisma.disconnect()
 
-    token = create_token(user[0]["id"])
+    token = create_token(user[0]["id"], expiry=2)
     return token

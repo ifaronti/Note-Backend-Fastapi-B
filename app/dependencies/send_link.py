@@ -17,8 +17,8 @@ conf = ConnectionConfig(
     VALIDATE_CERTS = True
 )
 
-async def send_mail(email:str):
-    html = """<a target=_blank href="http://localhost:3000/login/reset">Click Here To Reset Password</a>"""
+async def send_mail(email:str, token:str):
+    html = f"""<a target=_blank href="http://localhost:3000/login/reset?token={token}">Click Here To Reset Password</a>"""
 
     fm = FastMail(conf)
     message = MessageSchema(

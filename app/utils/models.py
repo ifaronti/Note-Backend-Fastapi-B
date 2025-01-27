@@ -69,7 +69,7 @@ class Note(BaseModel):
     last_edited: datetime
     
 class GetNotes(BaseModel):
-    data: list
+    data: Optional[list] = None
     success:bool
 
 class GitUser(BaseModel):

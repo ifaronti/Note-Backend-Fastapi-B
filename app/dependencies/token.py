@@ -11,14 +11,13 @@ token_scheme = OAuth2PasswordBearer(tokenUrl='api/auth/login')
 
 JWT_ASHIRI=settings.JWT_ASHIRI
 ALGORITHM = settings.ALGORITHM
-expiry = settings.TOKEN_EXPIRY
 
 the_except = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                            detail='Missing and or inaccurate parameters' 
                            )
 
 
-def create_token(user_id:str):
+def create_token(user_id:str, expiry:int):
     token_values = {"user_id":user_id}
     expire = datetime.now(timezone.utc) + timedelta(hours=expiry)
     token_values.update({"exp":expire})

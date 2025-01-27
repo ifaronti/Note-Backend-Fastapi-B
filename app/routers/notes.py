@@ -15,7 +15,7 @@ router = APIRouter(
 
 
 class GetTags(model):
-    tags: list
+    tags: Optional[list]=[]
     success:bool
     message:str
 
@@ -26,9 +26,7 @@ async def Tags(req:Request):
     return {"tags":tags, "success":True, "message":"All tags in notes"}
 
 
-
-
-@router.get("", response_model=GetNotes or [])
+@router.get("", response_model=GetNotes)
 async def Get_Notes(req:Request, parameter:Optional[str]=None):
     notes = await fetch_notes(req, parameter)
     return {"success":True, "data":notes}
