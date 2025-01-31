@@ -37,7 +37,7 @@ async def Email(email:MailLink):
 
 
 @router.patch("/login/reset", dependencies=[Depends(verify_token)], response_model=GenericResponse, status_code=status.HTTP_200_OK)
-async def Reset_Password(password:PassReset, req:Request):
+async def Password_Reset(password:PassReset, req:Request):
     await reset_password(password, req=req)
     return {"message":"User updated successfully", "success":True}
 

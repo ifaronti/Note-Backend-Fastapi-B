@@ -27,9 +27,10 @@ async def Delete_Note(id:int, req:Request):
         await prisma.query_raw(
             f"""
                 DELETE FROM note
-                WHERE note.id = {id}
-                AND note.user_id = '{req.state.user_id}'
-            """
+                WHERE note.id = $1
+                AND note.user_id = $2
+
+            """, id, req.state.user_id
         )
     except:
         raise
@@ -57,9 +58,9 @@ async def modify_note(note:EditNote, id:int, req:Request):
                 WHERE
                     note.id = $5
                 AND
-                    note.user_id = '{req.state.user_id}'
+                    note.user_id = $6
             """
-        , note.title, note.content, note.tags, note.is_archived, id)
+        , note.title, note.content, note.tags, note.is_archived, id, req.state.user_id)
     except:
         raise
     finally:
@@ -69,31 +70,34 @@ async def modify_note(note:EditNote, id:int, req:Request):
 
 
 
-async def fetch_notes(req:Request, parameter:Optional[str]=None):
+async def fetch_notes(req:Request, parameter:Optional[str]=None, tag:Optional[str]=None):
     try:
         await prisma.connect()
- 
-        notes = await prisma.query_raw(f"""
-            SELECT * 
-            FROM note
-            WHERE user_id = '{req.state.user_id}' 
-            OR (user_id = '{req.state.user_id}' AND
-                ('{parameter}' = 'archived' AND is_archived = TRUE) 
-                OR (
-                ('{parameter}' IS NOT NULL AND 
-                (content ILIKE '%{parameter}%' 
-                OR tags @> ARRAY['{parameter}'] 
-                OR title ILIKE '%{parameter}%')
+        query = """
+                SELECT * 
+                FROM note
+                WHERE note.user_id = $1
+                AND (
+                    ($2::text IS NULL AND $3::text IS NULL)
+                    OR ($2::text IS NOT NULL AND $2::text = 'all' AND note.is_archived = FALSE)
+                    OR
+                    ($2 IS NOT NULL AND tags @> ARRAY[$2])
+                    OR 
+                    ($3 = 'archived' AND note.is_archived = true)
+                    OR
+                    ($3 IS NOT NULL AND $3 != 'archived' AND (content ILIKE '%' || $3 || '%' OR title ILIKE '%' || $3 || '%'))
                 )
-                )
-            )
             ORDER BY created_at DESC;
-        """)
+        """
+        notes = await prisma.query_raw(
+            query, 
+            req.state.user_id,  # $1
+            tag,                # $2
+            parameter           # $3
+        )
     except:
         raise
     finally:
         await prisma.disconnect()
 
     return notes
-
-    

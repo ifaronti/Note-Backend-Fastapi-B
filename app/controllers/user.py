@@ -24,13 +24,10 @@ async def register(form_data:Register):
         hashed_pass = hash_password(password=form_data.password)
         await prisma.execute_raw(f"""
             INSERT INTO "user" (id, email, password)
-            VALUES('{user_id}', '{form_data.email}', '{hashed_pass}')
-        """)
-        # For some reasons, prisma won't allow raw_sql and uuid auto generated unless I 
-        # change the id's default value to autoincrement(). But I gotta practice my raw sql
-        # though. Prisma wins cause it's easy but what of complex queries and team leads
-        # that want raw sql only? Gotta be prepared for any outcome.
-    except:
+            VALUES($1, $2, $3)
+        """,{user_id}, {form_data.email}, {hashed_pass})
+        # For some reasons, prisma won't allow raw_sql and auto generated uuid unless I 
+        # change the id's default value to autoincrement().
         raise 
     finally:
         await prisma.disconnect()
@@ -49,8 +46,8 @@ async def logon(formdata:Annotated[Login, Depends(OAuth2PasswordRequestForm)]):
                 FROM
                     "user"
                 WHERE
-                    "user".email = '{formdata.username}'
-            """
+                    "user".email = $1
+            """, formdata.username
         )
 
         isMatch = verify_password(formdata.password, user[0]["password"])
@@ -76,8 +73,8 @@ async def send_link(body:MailLink)-> LoginResponse:
         user_email = await prisma.query_raw(f"""
                 SELECT email, id
                 FROM "user"
-                WHERE "user".email = '{email}' 
-            """)
+                WHERE "user".email = $1 
+            """, email)
     
         if not user_email[0]["email"]:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
@@ -100,12 +97,20 @@ async def reset_password(password:PassReset, req:Request)->GenericResponse:
 
     try:
         await prisma.connect()
+
+        user = await prisma.user.find_unique(where={'id':req.state.user_id})
+
+        isMatch = verify_password(password.old_pass, user.password)
+
+        if not isMatch:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid credential')
+
         await prisma.query_raw(
                 f"""
                     UPDATE "user"
                     SET password = COALESCE($1, password)
                     WHERE "user".id = $2
-                """, f'{hashed}', f'{req.state.user_id}'
+                """, hashed, req.state.user_id
             )
     except:
         raise
@@ -130,8 +135,8 @@ async def github_login(code:str):
                     )
                     SELECT id FROM inserted
                     UNION ALL
-                    SELECT id FROM "user" WHERE git_id = $4;
-                """, user_id, str(payload["email"]), payload["git_id"], payload["git_id"] )
+                    SELECT id FROM "user" WHERE git_id = $3;
+                """, user_id, str(payload["email"]), payload["git_id"] )
             
         print(user)
     except:
