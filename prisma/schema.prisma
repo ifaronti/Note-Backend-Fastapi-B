@@ -1,34 +1,34 @@
+generator db {
+  provider             = "prisma-client-py"
+  binaryTargets        = ["native"]
+  interface            = "asyncio"
+  recursive_type_depth = "5"
+}
+
 datasource db {
-  // could be postgresql or mysql
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator db {
-  provider             = "prisma-client-py"
-  interface            = "asyncio"
-  recursive_type_depth = 5
-  binaryTargets        = ["native"]
-}
-
 model user {
-  id       String @id @unique @default(uuid())
-  email    String @unique
+  email    String  @unique
   password String?
-  git_id   Int?   @unique
+  git_id   Int?    @unique
+  id       String  @id @unique @default(uuid())
   notes    note[]
 
   @@unique([id, email, git_id])
 }
 
 model note {
-  id     Int      @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   title       String
   content     String
-  tags        String[]
-  is_archived Boolean @default(false)
-  last_edited DateTime @updatedAt @default(now())
+  is_archived Boolean  @default(false)
+  last_edited DateTime @default(now()) @updatedAt
   user_id     String
-  user        user?    @relation(fields: [user_id], references: [id])
-  created_at DateTime @default(now())
+  tags        String[]
+  created_at  DateTime @default(now())
+  user        user     @relation(fields: [user_id], references: [id])
 }
+

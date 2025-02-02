@@ -1,27 +1,32 @@
-from prisma import Prisma
 from fastapi import Request
+from ..pyscopg_connect import Connect
+from psycopg2  import InterfaceError, OperationalError
 
-prisma = Prisma()
 
 
 async def fetch_tags(req:Request):
     try:
-        await prisma.connect()
-        tags = await prisma.query_raw(
+        dbconnect = Connect().dbconnect()
+        cursor = dbconnect.cursor()
+        cursor.execute(
             f"""
             SELECT json_agg(DISTINCT tag) AS tags
             FROM (
                 SELECT unnest(note.tags) AS tag
                 FROM note
-                WHERE note.user_id = $1
+                WHERE note.user_id = %s
             ) AS flattened_tags
-            """, req.state.user_id
+            """, (req.state.user_id,)
         )
+        tags = cursor.fetchone()
 
-    except:
-        raise
+    except InterfaceError as i:
+        raise i
+    except OperationalError as o:
+        raise o
     finally:
-        await prisma.disconnect()
+        cursor.close()
+        dbconnect.close()
 
-    return tags[0]["tags"]
-
+        dict(tags)["tags"]
+    return dict(tags)["tags"]

@@ -1,15 +1,14 @@
-from prisma import Prisma
 from ..utils.models import Register, Login, LoginResponse, MailLink, GenericResponse, PassReset, GitUser
 from ..dependencies.password_manager import verify_password, hash_password
-from ..dependencies.token import create_token, verify_token
+from ..dependencies.token import create_token
 from fastapi.security import OAuth2PasswordRequestForm
 from typing import Annotated
 from fastapi import Depends, status, HTTPException, Request
 import uuid
 from ..dependencies.send_link import send_mail
 from ..dependencies.git_oauth2 import git_user
-
-prisma = Prisma()
+from ..pyscopg_connect import Connect
+from psycopg2 import InterfaceError, OperationalError
 
 user_id = str(uuid.uuid1())
 
@@ -20,17 +19,25 @@ exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
 
 async def register(form_data:Register):
     try:
-        await prisma.connect()
+        dbconnect = Connect().dbconnect()
+        cursor = dbconnect.cursor()
+
         hashed_pass = hash_password(password=form_data.password)
-        await prisma.execute_raw(f"""
+
+        cursor.execute(f"""
             INSERT INTO "user" (id, email, password)
-            VALUES($1, $2, $3)
-        """,{user_id}, {form_data.email}, {hashed_pass})
-        # For some reasons, prisma won't allow raw_sql and auto generated uuid unless I 
-        # change the id's default value to autoincrement().
-        raise 
+            VALUES(%s, %s, %s)
+        """,(user_id, form_data.email, hashed_pass))
+        
+        dbconnect.commit()
+
+    except InterfaceError as i:
+        raise i
+    except OperationalError as o:
+        raise o 
     finally:
-        await prisma.disconnect()
+        cursor.close()
+        dbconnect.close()
 
 
 
@@ -39,26 +46,36 @@ async def register(form_data:Register):
 
 async def logon(formdata:Annotated[Login, Depends(OAuth2PasswordRequestForm)]):
     try:
-        await prisma.connect()
-        user = await prisma.query_raw(f"""
+        dbconnect = Connect().dbconnect()
+        cursor = dbconnect.cursor()
+        cursor.execute(f"""
                 SELECT 
                     id, password 
                 FROM
                     "user"
                 WHERE
-                    "user".email = $1
-            """, formdata.username
+                    "user".email = '{formdata.username}'
+            """
         )
+        
+        user = (cursor.fetchone())
 
-        isMatch = verify_password(formdata.password, user[0]["password"])
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
+
+        isMatch = verify_password(formdata.password, dict(user)["password"])
+
         if not isMatch:
             raise exception
 
-        token = create_token(user_id=user[0]["id"], expiry=2)
-    # except Exception:
-    #     raise Exception
+        token = create_token(user_id=user["id"], expiry=2)
+    except InterfaceError as i:
+        raise i
+    except OperationalError as o:
+        raise o
     finally:
-        await prisma.disconnect()
+        cursor.close()
+        dbconnect.close()
     return token
 
 
@@ -67,25 +84,31 @@ async def logon(formdata:Annotated[Login, Depends(OAuth2PasswordRequestForm)]):
 
 
 async def send_link(body:MailLink)-> LoginResponse:
-    email = body.email
     try:
-        await prisma.connect()
-        user_email = await prisma.query_raw(f"""
+        dbconnect = Connect().dbconnect()
+        cursor = dbconnect.cursor()
+        cursor.execute(f"""
                 SELECT email, id
                 FROM "user"
-                WHERE "user".email = $1 
-            """, email)
+                WHERE "user".email = %s 
+            """, (body.email,))
+        
+        user_email = cursor.fetchone()
     
-        if not user_email[0]["email"]:
+        if not dict(user_email)["email"]:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
                             detail="User not found")
     
-        token = create_token(user_email[0]["id"], 1)
-        await send_mail(email, token)
-    except:
-        raise
+        token = create_token(user_email["id"], 1)
+
+        await send_mail(body.email, token)
+    except InterfaceError as i:
+        raise i
+    except OperationalError as o:
+        raise o
     finally:
-        await prisma.disconnect()
+        cursor.close()
+        dbconnect.close()
 
 
 
@@ -96,26 +119,37 @@ async def reset_password(password:PassReset, req:Request)->GenericResponse:
     hashed = hash_password(password.password)
 
     try:
-        await prisma.connect()
+        dbconnect = Connect().dbconnect()
+        cursor = dbconnect.cursor()
+        cursor.execute(f"""
+                    SELECT password
+                    FROM "user"
+                    WHERE "user".id = %s 
+                """, (req.state.user_id,)
+        )
 
-        user = await prisma.user.find_unique(where={'id':req.state.user_id})
+        user = dict((cursor.fetchone()))
 
-        isMatch = verify_password(password.old_pass, user.password)
+        isMatch = verify_password(password.old_pass, user["password"])
 
         if not isMatch:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid credential')
 
-        await prisma.query_raw(
+        cursor.execute(
                 f"""
                     UPDATE "user"
-                    SET password = COALESCE($1, password)
-                    WHERE "user".id = $2
-                """, hashed, req.state.user_id
-            )
-    except:
-        raise
+                    SET password = COALESCE(%s, password)
+                    WHERE "user".id = %s
+                """, (hashed, req.state.user_id)
+        )
+        dbconnect.commit()
+    except InterfaceError as i:
+        raise i
+    except OperationalError as o:
+        raise o
     finally:
-        await prisma.disconnect()
+        cursor.close()
+        dbconnect.close()
 
 
 async def github_login(code:str):
@@ -124,25 +158,31 @@ async def github_login(code:str):
     payload = {"git_id":gitUser["id"], "email":gitUser["email"]}
 
     try:
-        await prisma.connect()
-        user = await prisma.query_raw(
+        dbconnect = Connect().dbconnect()
+        cursor = dbconnect.cursor()
+        cursor.execute(
                 f"""
                 WITH inserted AS (
                     INSERT INTO "user" (id, email, git_id)
-                    VALUES ($1, $2, $3)
+                    VALUES (%s, %s, %s)
                     ON CONFLICT (email) DO NOTHING
                     RETURNING id
                     )
                     SELECT id FROM inserted
                     UNION ALL
-                    SELECT id FROM "user" WHERE git_id = $3;
-                """, user_id, str(payload["email"]), payload["git_id"] )
-            
-        print(user)
-    except:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unable to fetch user details")
+                    SELECT id FROM "user" WHERE git_id = %s;
+                """, (user_id, payload["email"], payload["git_id"], payload["git_id"]) )
+        
+        dbconnect.commit()
+        user = dict(cursor.fetchone())
+        
+    except InterfaceError as i:
+        raise i
+    except OperationalError as o:
+        raise o
     finally:
-        await prisma.disconnect()
+        cursor.close()
+        dbconnect.close()
 
-    token = create_token(user[0]["id"], expiry=2)
+    token = create_token(user["id"], expiry=2)
     return token
