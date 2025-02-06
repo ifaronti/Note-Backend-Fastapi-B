@@ -40,7 +40,7 @@
 
   - Services:
     - AWS ECS (Image repo)
-    - AWS LAMBDA (serverles)
+    - AWS LAMBDA (serverless)
     - Neon.tech (database server host)
     - vercel (frontend host)
     - gmail for mail client (password reset)
@@ -50,6 +50,6 @@
   - [frontend repo](https://github.com/ifaronti/Note-App/tree/main)
 #
 ## Acknowledgment:
- - Stackoverflow: for disovering better practices.
+ - Stackoverflow: for discovering better practices.
  - Chatgpt: for fixing errors in my raw sql queries.
  - Ifarontimi: ayo, ayo ayo WHAT'S MY NAME?!
