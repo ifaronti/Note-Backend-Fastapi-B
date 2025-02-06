@@ -47,7 +47,7 @@
 #
 ## Links:
   - [frontend](https://note-obhp313k5-ifarontis-projects.vercel.app/)
-  - [backend repo](https://github.com/ifaronti/Note-Backend-Fastapi-B)
+  - [frontend repo](https://github.com/ifaronti/Note-App/tree/main)
 #
 ## Acknowledgment:
  - Stackoverflow: for disovering better practices.
