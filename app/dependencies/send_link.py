@@ -18,7 +18,7 @@ conf = ConnectionConfig(
 )
 
 async def send_mail(email:str, token:str):
-    html = f"""<a target=_blank href="https://note-obhp313k5-ifarontis-projects.vercel.app/login/reset?token={token}">Click Here To Reset Password</a>"""
+    html = f"""<a target=_blank href="https://note-app-eight-peach.vercel.app/login/reset?token={token}">Click Here To Reset Password</a>"""
 
     fm = FastMail(conf)
     message = MessageSchema(
@@ -30,8 +30,8 @@ async def send_mail(email:str, token:str):
     await fm.send_message(message=message)
 
 
-def background_send(email:str, background_tasks:BackgroundTasks):
-    html = """<a target=_blank href="https://note-obhp313k5-ifarontis-projects.vercel.app/login/reset">Click Here To Reset Password</a>"""
+def background_send(email:str, token:str, background_tasks:BackgroundTasks):
+    html = f"""<a target=_blank href="https://note-app-eight-peach.vercel.app/login/reset?token={token}">Click Here To Reset Password</a>"""
 
     fm = FastMail(conf)
     message = MessageSchema(
