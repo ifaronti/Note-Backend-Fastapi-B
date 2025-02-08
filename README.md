@@ -46,7 +46,7 @@
     - gmail for mail client (password reset)
 #
 ## Links:
-  - [frontend](https://note-obhp313k5-ifarontis-projects.vercel.app/)
+  - [frontend](https://note-app-eight-peach.vercel.app)
   - [frontend repo](https://github.com/ifaronti/Note-App/tree/main)
 #
 ## Acknowledgment:
