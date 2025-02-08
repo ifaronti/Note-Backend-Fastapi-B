@@ -18,7 +18,7 @@ conf = ConnectionConfig(
 )
 
 async def send_mail(email:str, token:str):
-    html = f"""<a target=_blank href="http://localhost:3000/login/reset?token={token}">Click Here To Reset Password</a>"""
+    html = f"""<a target=_blank href="https://note-obhp313k5-ifarontis-projects.vercel.app/login/reset?token={token}">Click Here To Reset Password</a>"""
 
     fm = FastMail(conf)
     message = MessageSchema(
@@ -31,7 +31,7 @@ async def send_mail(email:str, token:str):
 
 
 def background_send(email:str, background_tasks:BackgroundTasks):
-    html = """<a target=_blank href="http://localhost:3000/login/reset">Click Here To Reset Password</a>"""
+    html = """<a target=_blank href="https://note-obhp313k5-ifarontis-projects.vercel.app/login/reset">Click Here To Reset Password</a>"""
 
     fm = FastMail(conf)
     message = MessageSchema(

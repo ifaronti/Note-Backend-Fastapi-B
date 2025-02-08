@@ -121,19 +121,6 @@ async def reset_password(password:PassReset, req:Request)->GenericResponse:
     try:
         dbconnect = Connect().dbconnect()
         cursor = dbconnect.cursor()
-        cursor.execute(f"""
-                    SELECT password
-                    FROM "user"
-                    WHERE "user".id = %s 
-                """, (req.state.user_id,)
-        )
-
-        user = dict((cursor.fetchone()))
-
-        isMatch = verify_password(password.old_pass, user["password"])
-
-        if not isMatch:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid credential')
 
         cursor.execute(
                 f"""

@@ -43,7 +43,6 @@ class MailLink(BaseModel):
 
 class PassReset(BaseModel):
     password:str
-    old_pass:str
 
 class NewNote(BaseModel):  
     title :str
