@@ -23,7 +23,7 @@ def get_token(code:str):
     
 
 def get_email(token:str):
-    url = "https://github.com/user/email"
+    url = "https://api.github.com/user/emails"
     header = {"Content-Type":"application/json", "Authorization":f"Bearer {token}"}
 
     response = requests.get(url=url, headers=header)
@@ -31,7 +31,7 @@ def get_email(token:str):
     if response.status_code == 200:
         emails = response.json()
     
-    primary_email = list(filter(lambda a:a["primary"] == True, list(emails)))[0]["email"]
+    primary_email = emails[0]["email"]
 
     return primary_email
 
