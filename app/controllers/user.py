@@ -152,7 +152,7 @@ async def github_login(code:str):
                 WITH inserted AS (
                     INSERT INTO "user" (id, email, git_id)
                     VALUES (%s, %s, %s)
-                    ON CONFLICT (email) DO NOTHING
+                    ON CONFLICT (git_id, email) DO NOTHING
                     RETURNING id
                     )
                     SELECT id FROM inserted
