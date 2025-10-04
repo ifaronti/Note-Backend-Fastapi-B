@@ -10,19 +10,27 @@ from ..dependencies.git_oauth2 import git_user
 from ..pyscopg_connect import Connect
 from psycopg2 import InterfaceError, OperationalError
 
-user_id = str(uuid.uuid1())
-
 exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                           detail='Invalid credentials provided')
 
 
 
-async def register(form_data:Register):
+async def register(form_data:Register)-> GenericResponse:
     try:
+        user_id = str(uuid.uuid1())
         dbconnect = Connect().dbconnect()
         cursor = dbconnect.cursor()
 
         hashed_pass = hash_password(password=form_data.password)
+        cursor.execute(f"""
+            SELECT email FROM "user" WHERE email=%s
+        """, (form_data.email,))
+
+        is_user = cursor.fetchone()
+
+        if is_user:
+            print('user exists already')
+            return GenericResponse(success=False, message="User already exists")
 
         cursor.execute(f"""
             INSERT INTO "user" (id, email, password)
@@ -35,10 +43,14 @@ async def register(form_data:Register):
         raise i
     except OperationalError as o:
         raise o 
+    except Exception as e:
+        print(str(e))
+        raise
     finally:
         cursor.close()
         dbconnect.close()
 
+    return GenericResponse(success=True, message="User created")
 
 
 
@@ -145,6 +157,7 @@ async def github_login(code:str):
     payload = {"git_id":gitUser["id"], "email":gitUser["email"]}
 
     try:
+        user_id = str(uuid.uuid1())
         dbconnect = Connect().dbconnect()
         cursor = dbconnect.cursor()
         cursor.execute(
@@ -152,13 +165,13 @@ async def github_login(code:str):
                 WITH inserted AS (
                     INSERT INTO "user" (id, email, git_id)
                     VALUES (%s, %s, %s)
-                    ON CONFLICT (git_id, email) DO NOTHING
+                    ON CONFLICT (email, git_id, ) DO NOTHING
                     RETURNING id
                     )
                     SELECT id FROM inserted
                     UNION ALL
                     SELECT id FROM "user" WHERE git_id = %s;
-                """, (user_id, payload["email"], payload["git_id"], payload["git_id"]) )
+                """, (user_id, payload["email"], payload["git_id"]) )
         
         dbconnect.commit()
         user = dict(cursor.fetchone())

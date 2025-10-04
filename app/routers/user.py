@@ -19,8 +19,7 @@ async def Signin(formdata:Annotated[Login, Depends(OAuth2PasswordRequestForm)]):
 
 @router.post("/signup", response_model=GenericResponse, status_code=status.HTTP_201_CREATED)
 async def Signup(body:Register):
-    await register(body)
-    return {"success":True, "message":"User created"}
+    return await register(body)
 
 
 
