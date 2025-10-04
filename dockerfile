@@ -7,7 +7,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ${LAMBDA_TASK_ROOT}/app
 COPY .venv ${LAMBDA_TASK_ROOT}/.venv
-COPY main.py ${LAMBDA_TASK_ROOT}
 COPY .env ${LAMBDA_TASK_ROOT}
-
+COPY main.py ${LAMBDA_TASK_ROOT}
 CMD ["main.handler"]
