@@ -165,13 +165,13 @@ async def github_login(code:str):
                 WITH inserted AS (
                     INSERT INTO "user" (id, email, git_id)
                     VALUES (%s, %s, %s)
-                    ON CONFLICT (email, git_id, ) DO NOTHING
+                    ON CONFLICT (email, git_id) DO NOTHING
                     RETURNING id
                     )
                     SELECT id FROM inserted
                     UNION ALL
                     SELECT id FROM "user" WHERE git_id = %s;
-                """, (user_id, payload["email"], payload["git_id"]) )
+                """, (user_id, payload["email"], payload["git_id"], payload["git_id"]) )
         
         dbconnect.commit()
         user = dict(cursor.fetchone())

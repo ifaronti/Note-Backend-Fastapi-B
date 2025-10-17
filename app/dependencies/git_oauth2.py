@@ -5,7 +5,7 @@ from ..utils.models import GitUser
 
 settings = Settings()
 
-def get_token(code:str):
+def get_token(code:str)-> str:
     client_id = settings.CLIENT_ID
     client_secret = settings.CLIENT_SECRET
     token_queries = {"client_id":client_id, "client_secret":client_secret, "code":code}
@@ -22,7 +22,7 @@ def get_token(code:str):
     return token
     
 
-def get_email(token:str):
+def get_email(token:str)-> str:
     url = "https://api.github.com/user/emails"
     header = {"Content-Type":"application/json", "Authorization":f"Bearer {token}"}
 
