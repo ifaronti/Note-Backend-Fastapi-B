@@ -155,11 +155,12 @@ async def github_login(code:str):
     gitUser:GitUser = git_user(code)
 
     payload = {"git_id":gitUser["id"], "email":gitUser["email"]}
-
+    dbconnect = Connect().dbconnect()
+    cursor = dbconnect.cursor()
+    
     try:
         user_id = str(uuid.uuid1())
-        dbconnect = Connect().dbconnect()
-        cursor = dbconnect.cursor()
+
         cursor.execute(
                 f"""
                 WITH inserted AS (

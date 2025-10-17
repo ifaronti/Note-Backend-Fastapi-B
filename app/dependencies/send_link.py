@@ -16,7 +16,7 @@ conf = ConnectionConfig(
     USE_CREDENTIALS = True,
     VALIDATE_CERTS = True
 )
-# https://note-app-eight-peach.vercel.app/
+
 async def send_mail(email:str, token:str):
     html = f"""<a target=_blank href="https://note-app-eight-peach.vercel.app/login/reset?token={token}">Click Here To Reset Password</a>"""
 
